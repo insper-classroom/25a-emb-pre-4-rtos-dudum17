@@ -26,7 +26,10 @@ void btn_callback(uint gpio, uint32_t events) {
 
 void btn_2_callback(uint gpio, uint32_t events) {
     if (events == 0x4) { // fall edge
-        xSemaphoreGiveFromISR(xSemaphore_g, 0);
+        BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+        int msg = 1; // Apenas um valor qualquer para indicar que o botão foi pressionado
+        xQueueSendFromISR(xQueueButId_2, &msg, &xHigherPriorityTaskWoken);
+        portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
     }
 }
 
@@ -101,14 +104,16 @@ void btn_2_task(void *p) {
                                        &btn_2_callback);
 
     int delay = 0;
+    int msg; // Variável para armazenar a mensagem recebida da fila
+
     while (true) {
-        if (xSemaphoreTake(xSemaphore_g, pdMS_TO_TICKS(500)) == pdTRUE) {
+        if (xQueueReceive(xQueueButId_2, &msg, portMAX_DELAY)) {
             if (delay < 1000) {
                 delay += 100;
             } else {
                 delay = 100;
             }
-            printf("delay btn %d \n", delay);
+            printf("delay btn G %d \n", delay);
             xQueueSend(xQueueButId_2, &delay, 0);
         }
     }
