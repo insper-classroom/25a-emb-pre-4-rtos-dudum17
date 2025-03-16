@@ -27,8 +27,7 @@ void btn_callback(uint gpio, uint32_t events) {
 void btn_2_callback(uint gpio, uint32_t events) {
     if (events == 0x4) { // fall edge
         BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-        int msg = 1; // Apenas um valor qualquer para indicar que o botão foi pressionado
-        xQueueSendFromISR(xQueueButId_2, &msg, &xHigherPriorityTaskWoken);
+        xSemaphoreGiveFromISR(xSemaphore_g, &xHigherPriorityTaskWoken);
         portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
     }
 }
@@ -100,11 +99,10 @@ void btn_2_task(void *p) {
     gpio_init(BTN_PIN_G);
     gpio_set_dir(BTN_PIN_G, GPIO_IN);
     gpio_pull_up(BTN_PIN_G);
-    gpio_set_irq_enabled_with_callback(BTN_PIN_G, GPIO_IRQ_EDGE_FALL, true,
-                                       &btn_2_callback);
+    gpio_set_irq_enabled_with_callback(BTN_PIN_G, GPIO_IRQ_EDGE_FALL, true, &btn_2_callback);
 
     int delay = 0;
-    int msg; // Variável para armazenar a mensagem recebida da fila
+    int msg;
 
     while (true) {
         if (xQueueReceive(xQueueButId_2, &msg, portMAX_DELAY)) {
@@ -131,8 +129,8 @@ int main() {
 
     xTaskCreate(led_1_task, "LED_Task 1", 256, NULL, 1, NULL);
     xTaskCreate(btn_1_task, "BTN_Task 1", 256, NULL, 1, NULL);
-    xTaskCreate(led_2_task, "LED_Task 1", 256, NULL, 1, NULL);
-    xTaskCreate(btn_2_task, "LED_Task 1", 256, NULL, 1, NULL);
+    xTaskCreate(led_2_task, "LED_Task 2", 256, NULL, 1, NULL);
+    xTaskCreate(btn_2_task, "BTN_Task 2", 256, NULL, 1, NULL);
 
     vTaskStartScheduler();
 
